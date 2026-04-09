@@ -1,0 +1,68 @@
+{
+  "name": "sub-language-support",
+  "displayName": "SUB Language Support",
+  "description": "Syntax highlighting and language support for SUB Programming Language",
+  "version": "1.0.0",
+  "publisher": "subhobhai943",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/subhobhai943/sub-lang"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "sub",
+    "sublang",
+    "sub-lang",
+    "multi-language",
+    "compiler",
+    "syntax"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sub",
+        "aliases": [
+          "SUB",
+          "sub",
+          "SUB Language"
+        ],
+        "extensions": [
+          ".sb",
+          ".sub"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/sub-icon.png",
+          "dark": "./images/sub-icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sub",
+        "scopeName": "source.sub",
+        "path": "./syntaxes/sub.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "sub",
+        "path": "./snippets/sub.json"
+      }
+    ]
+  },
+  "main": "./extension.js",
+  "scripts": {
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0"
+  },
+  "license": "MIT"
+}

@@ -1,24 +1,84 @@
-# Build artifacts
-*.out
+# Compiled binaries and executables
+subc-native
+subc-native-*
+sublang
+sublang-*
+output_bin
+debug_*
+uni_test
+func_test
+program
+simple_output
+test_*_output
+test_out
 *.exe
-output_*.code
-build/
+*.out
+*.app
+a.out
 
-# Rust
-target/
-**/*.rs.bk
+# Object files and libraries
+*.o
+*.on
+*.a
+*.so
+*.dylib
+*.dll
+*.lib
 
-# Editor files
-.vscode/
-.idea/
+# Assembly files (generated)
+*.s
+*.asm
+
+# Backup files
+*.backup
+*.bak
+*.old
 *.swp
 *.swo
 *~
 
-# OS files
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
 .DS_Store
 Thumbs.db
 
-# Temporary files
-*.tmp
+# Build directories
+build/
+dist/
+out/
+target/
+
+# Test outputs
+*_output.txt
+test_output/
+
+# Generated transpiled files (allow in examples/tests)
+*.py
+!.github/scripts/opencode.py
+*.js
+*.rb
+*.java
+*.cpp
+*.rs
+*.kt
+*.swift
+!tests/*.py
+!examples/*.py
+!examples/*.js
+!examples/*.sb
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+
+# Logs
 *.log
+
+# Package manager
+node_modules/
+__pycache__/
+*.pyc

@@ -1,0 +1,19 @@
+# SUB Language Files
+*.sb linguist-language=SUB linguist-detectable=true
+
+# Documentation
+*.md linguist-documentation=true
+
+# Examples
+examples/** linguist-documentation=true
+tests/*.sb linguist-documentation=false
+
+# Generated files
+*.o linguist-generated=true
+*.exe linguist-generated=true
+*.out linguist-generated=true
+*.s linguist-generated=true
+*.asm linguist-generated=true
+
+# Vendored code (if any)
+stdlib/** linguist-vendored=false

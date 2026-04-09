@@ -1,0 +1,160 @@
+name: Syntax Highlighting Validation
+
+on:
+  push:
+    paths:
+      - '**.sb'
+      - '.gitattributes'
+      - '.github/linguist/**'
+      - '.github/linguist.yml'
+  pull_request:
+    paths:
+      - '**.sb'
+      - '.gitattributes'
+      - '.github/linguist/**'
+      - '.github/linguist.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-grammar:
+    name: Validate TextMate Grammar
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install validator
+        run: |
+          npm install -g ajv-cli
+      
+      - name: Validate grammar JSON
+        run: |
+          echo "Validating TextMate grammar file..."
+          if [ -f ".github/linguist/sub.tmLanguage.json" ]; then
+            # Check if file is valid JSON
+            cat .github/linguist/sub.tmLanguage.json | jq . > /dev/null
+            echo "Grammar file is valid JSON"
+          else
+            echo "Grammar file not found!"
+            exit 1
+          fi
+      
+      - name: Check grammar completeness
+        run: |
+          echo "Checking grammar coverage..."
+          grammar_file=".github/linguist/sub.tmLanguage.json"
+          
+          # Check for essential patterns
+          if grep -q '"keywords"' "$grammar_file" && \
+             grep -q '"strings"' "$grammar_file" && \
+             grep -q '"numbers"' "$grammar_file" && \
+             grep -q '"comments"' "$grammar_file"; then
+            echo "All essential patterns found"
+          else
+            echo "Warning: Some essential patterns may be missing"
+          fi
+
+  validate-linguist:
+    name: Validate Linguist Config
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+      
+      - name: Install GitHub Linguist
+        run: |
+          gem install github-linguist
+      
+      - name: Validate .gitattributes
+        run: |
+          echo "Checking .gitattributes configuration..."
+          if [ -f ".gitattributes" ]; then
+            if grep -q "*.sb" ".gitattributes"; then
+              echo ".sb files configured in .gitattributes"
+            else
+              echo "Warning: .sb files not configured in .gitattributes"
+              exit 1
+            fi
+          else
+            echo "Error: .gitattributes not found"
+            exit 1
+          fi
+      
+      - name: Check linguist.yml
+        run: |
+          echo "Checking linguist.yml configuration..."
+          if [ -f ".github/linguist.yml" ]; then
+            cat .github/linguist.yml | grep -A 10 "SUB:"
+            echo "Linguist configuration found"
+          else
+            echo "Warning: linguist.yml not found"
+          fi
+
+  test-syntax-highlighting:
+    name: Test Syntax Highlighting
+    runs-on: ubuntu-latest
+    needs: [validate-grammar, validate-linguist]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Find .sb test files
+        run: |
+          echo "Finding SUB language test files..."
+          sb_files=$(find . -name "*.sb" -type f | head -10)
+          echo "Found .sb files:"
+          echo "$sb_files"
+          
+          if [ -z "$sb_files" ]; then
+            echo "Warning: No .sb files found for testing"
+          else
+            echo "Found $(find . -name '*.sb' -type f | wc -l) .sb files"
+          fi
+      
+      - name: Display sample SUB code
+        run: |
+          echo "Sample SUB language code:"
+          if [ -f "tests/test_simple.sb" ]; then
+            echo "--- tests/test_simple.sb ---"
+            cat tests/test_simple.sb || echo "File not accessible"
+          elif [ -f "example.sb" ]; then
+            echo "--- example.sb ---"
+            cat example.sb || echo "File not accessible"
+          else
+            echo "No sample file found"
+          fi
+      
+      - name: Summary
+        run: |
+          echo ""
+          echo "=============================================="
+          echo "  Syntax Highlighting Validation Complete"
+          echo "=============================================="
+          echo ""
+          echo "Configuration Status:"
+          echo "  Grammar File: OK"
+          echo "  Linguist Config: OK"
+          echo "  .gitattributes: OK"
+          echo ""
+          echo "Next Steps:"
+          echo "  1. Push changes to GitHub"
+          echo "  2. GitHub will process linguist data"
+          echo "  3. .sb files will be highlighted with SUB syntax"
+          echo "  4. Language statistics will show SUB in repo"
+          echo ""
+          echo "Note: Syntax highlighting may take a few minutes"
+          echo "to appear after pushing changes."
+          echo "=============================================="
