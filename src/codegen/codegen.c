@@ -195,8 +195,9 @@ static void optimize_constant_folding(ASTNode *node) {
                     node->value = strdup(folded_val);
                     node->data_type = TYPE_INT;
 
-                    parser_free_ast(node->left);
-                    parser_free_ast(node->right);
+                    /* Don't free sub-trees here — other AST nodes may
+                       still reference them. Let parser_free_ast handle
+                       cleanup at the end with its visited-node tracking. */
                     node->left = NULL;
                     node->right = NULL;
                 }

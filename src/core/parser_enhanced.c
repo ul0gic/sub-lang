@@ -1125,17 +1125,13 @@ ASTNode* parser_parse_statement(CompilerContext *ctx) {
 }
 
 /* Free AST — tracks visited nodes to prevent double-free from shared references.
-   Uses a static FreeSet so that ALL calls to parser_free_ast share the same
-   visited set. This handles the case where codegen.c frees sub-trees during
-   constant folding, then the final cleanup call encounters those same nodes.
-   Call parser_free_ast_reset() to clear the set between compilations. */
+   The next-chain is traversed iteratively to avoid stack overflow on platforms
+   with small default stacks (macOS: 512KB vs Linux: 8MB). */
 typedef struct {
     void **ptrs;
     int count;
     int capacity;
 } FreeSet;
-
-static FreeSet g_freeset = {NULL, 0, 0};
 
 static bool freeset_contains(FreeSet *fs, void *p) {
     for (int i = 0; i < fs->count; i++) {
@@ -1154,24 +1150,34 @@ static void freeset_add(FreeSet *fs, void *p) {
     fs->ptrs[fs->count++] = p;
 }
 
-void parser_free_ast(ASTNode *node) {
-    if (!node || freeset_contains(&g_freeset, node)) return;
-    freeset_add(&g_freeset, node);
+static void free_ast_impl(ASTNode *node, FreeSet *fs) {
+    while (node) {
+        if (freeset_contains(fs, node)) return;
+        freeset_add(fs, node);
 
-    free(node->value);
-    free(node->metadata);
-    parser_free_ast(node->left);
-    parser_free_ast(node->right);
-    parser_free_ast(node->next);
-    parser_free_ast(node->condition);
-    parser_free_ast(node->body);
+        free(node->value);
+        free(node->metadata);
 
-    if (node->children) {
-        for (int i = 0; i < node->child_count; i++) {
-            parser_free_ast(node->children[i]);
+        free_ast_impl(node->left, fs);
+        free_ast_impl(node->right, fs);
+        free_ast_impl(node->condition, fs);
+        free_ast_impl(node->body, fs);
+
+        if (node->children) {
+            for (int i = 0; i < node->child_count; i++) {
+                free_ast_impl(node->children[i], fs);
+            }
+            free(node->children);
         }
-        free(node->children);
-    }
 
-    free(node);
+        ASTNode *next = node->next;
+        free(node);
+        node = next; /* iterate instead of recurse for next-chain */
+    }
+}
+
+void parser_free_ast(ASTNode *node) {
+    FreeSet fs = {NULL, 0, 0};
+    free_ast_impl(node, &fs);
+    free(fs.ptrs);
 }
