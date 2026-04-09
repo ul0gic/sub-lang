@@ -1818,31 +1818,31 @@ char* codegen_go(ASTNode *ast, const char *source) {
         sb_append(sb, "import \"fmt\"\n\n");
     }
 
-    /* Pass 1: emit top-level function declarations at package level */
+    /* Pass 1: emit functions at package level, track main and other stmts */
+    bool has_user_main = false;
+    bool has_other_stmts = false;
     for (ASTNode *stmt = block_first(ast); stmt; stmt = stmt->next) {
         if (stmt->type == AST_FUNCTION_DECL) {
+            if (stmt->value && strcmp(stmt->value, "main") == 0)
+                has_user_main = true;
             generate_node_go(sb, stmt, 0);
+        } else {
+            has_other_stmts = true;
         }
     }
 
-    /* Pass 2: wrap non-function top-level statements in func main() */
-    bool has_main_stmts = false;
-    for (ASTNode *stmt = block_first(ast); stmt; stmt = stmt->next) {
-        if (stmt->type != AST_FUNCTION_DECL) {
-            has_main_stmts = true;
-            break;
-        }
-    }
-
-    sb_append(sb, "\nfunc main() {\n");
-    if (has_main_stmts) {
+    /* Pass 2: wrap non-function stmts in func main() only if needed */
+    if (has_other_stmts && !has_user_main) {
+        sb_append(sb, "\nfunc main() {\n");
         for (ASTNode *stmt = block_first(ast); stmt; stmt = stmt->next) {
             if (stmt->type != AST_FUNCTION_DECL) {
                 generate_node_go(sb, stmt, 1);
             }
         }
+        sb_append(sb, "}\n");
+    } else if (!has_other_stmts && !has_user_main) {
+        sb_append(sb, "\nfunc main() {}\n");
     }
-    sb_append(sb, "}\n");
 
     return sb_to_string(sb);
 }

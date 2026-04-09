@@ -1124,24 +1124,54 @@ ASTNode* parser_parse_statement(CompilerContext *ctx) {
     return stmt;
 }
 
-/* Free AST */
-void parser_free_ast(ASTNode *node) {
-    if (!node) return;
+/* Free AST — tracks visited nodes to prevent double-free from shared references */
+typedef struct {
+    void **ptrs;
+    int count;
+    int capacity;
+} FreeSet;
+
+static bool freeset_contains(FreeSet *fs, void *p) {
+    for (int i = 0; i < fs->count; i++) {
+        if (fs->ptrs[i] == p) return true;
+    }
+    return false;
+}
+
+static void freeset_add(FreeSet *fs, void *p) {
+    if (fs->count >= fs->capacity) {
+        fs->capacity = fs->capacity ? fs->capacity * 2 : 64;
+        void **tmp = realloc(fs->ptrs, sizeof(void *) * fs->capacity);
+        if (!tmp) return;
+        fs->ptrs = tmp;
+    }
+    fs->ptrs[fs->count++] = p;
+}
+
+static void free_ast_impl(ASTNode *node, FreeSet *fs) {
+    if (!node || freeset_contains(fs, node)) return;
+    freeset_add(fs, node);
 
     free(node->value);
     free(node->metadata);
-    if (node->left) parser_free_ast(node->left);
-    if (node->right) parser_free_ast(node->right);
-    if (node->next) parser_free_ast(node->next);
-    if (node->condition) parser_free_ast(node->condition);
-    if (node->body) parser_free_ast(node->body);
+    free_ast_impl(node->left, fs);
+    free_ast_impl(node->right, fs);
+    free_ast_impl(node->next, fs);
+    free_ast_impl(node->condition, fs);
+    free_ast_impl(node->body, fs);
 
     if (node->children) {
         for (int i = 0; i < node->child_count; i++) {
-            parser_free_ast(node->children[i]);
+            free_ast_impl(node->children[i], fs);
         }
         free(node->children);
     }
 
     free(node);
+}
+
+void parser_free_ast(ASTNode *node) {
+    FreeSet fs = {NULL, 0, 0};
+    free_ast_impl(node, &fs);
+    free(fs.ptrs);
 }
